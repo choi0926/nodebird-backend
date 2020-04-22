@@ -8,11 +8,17 @@ router.get("/", async (req, res, next) => {
       include: [
         {
           model: db.User,
-          attributes: ["id", "nickname", "email"],
+          attributes:['id','nickname','email']
         },
         {
           model: db.Image,
         },
+        {
+          model: db.User,
+          through:'Like',
+          as:'Likers',
+          attributes:['id','nickname','email']
+        }
       ],
       order: [["createdAt", "DESC"]],
     });
