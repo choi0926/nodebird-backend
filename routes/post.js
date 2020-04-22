@@ -1,8 +1,10 @@
-import express from "express";
-import db from "../models";
+import express from 'express';
+import db from '../models';
+import {isLoggendIn,isNotLoggendIn} from  './middleware'
+
 const router = express.Router();
 
-router.post('/', async (req, res,next) => {
+router.post('/',isLoggendIn, async (req, res,next) => {
   try {
      const hashtags = req.body.content.match(/#[^\s]+/g);
      console.log(hashtags);
@@ -33,6 +35,8 @@ router.post('/', async (req, res,next) => {
     next(err);
   }
 });
+
 router.get('/images', (req, res) => {});
+
 
 module.exports = router;

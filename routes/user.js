@@ -2,18 +2,17 @@ import express from "express";
 import db from "../models";
 import bcrpt from "bcrypt";
 import jwt from "jsonwebtoken";
+import {isLoggendIn,isNotLoggendIn} from  './middleware'
 import passport from "passport";
 const router = express.Router();
 
-router.get('/', (req, res) => {
-  if (!req.user) {
-    return res.status(401).send("로그인이 필요합니다.");
-  }
+router.get('/',isLoggendIn, (req, res) => {
+
   const user = Object.assign({}, req.user.toJSON());
   delete user.password;
   return res.json(user);
 });
-router.post('/signup', async (req, res, next) => {
+router.post('/signup', isNotLoggendIn,async (req, res, next) => {
   //회원가입
   try {
     const exUser = await db.User.findOne({
