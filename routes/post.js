@@ -169,11 +169,17 @@ router.delete('/:id/like',isLoggedIn,async(req,res,next)=>{
 
 router.post('/:id/retweet',isLoggedIn,async(req,res,next)=>{
   try{
-    const post = await db.Post.findOne({where:{id:req.params.id}})
+    const post = await db.Post.findOne({
+      where:{id:req.params.id},
+      include:[{
+        model:db.Post,
+        as:'Retweet',
+      }]
+    })
     if(!post){
       return res.status(404).send('존재하지 않는 게시물입니다.');
     }
-    if(req.user.id === post.userId){
+    if(req.user.id === post.userId || post.Retweet &&  post.Retweet.userId === req.user.id){ //게시물 작성자 또는 리트윗한 게시물 작성자
       return res.status(403).send('자신의 게시물은 리트윗할 수 없습니다.');
     }
     const retweetTagetId = post.RetweetId ||post.id;  //게시물을 리트윗하거나 리트윗한 게시물을 다시 리트윗 할 경우

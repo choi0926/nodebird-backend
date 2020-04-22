@@ -18,6 +18,15 @@ router.get("/", async (req, res, next) => {
           through:'Like',
           as:'Likers',
           attributes:['id','nickname','email']
+        },{
+          model:db.Post,
+          as:'Retweet',
+          include:[{
+            model:db.User,
+            attributes:['id','nickname','email']
+          },{
+            model: db.Image,
+          }]
         }
       ],
       order: [["createdAt", "DESC"]],
