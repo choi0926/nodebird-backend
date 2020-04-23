@@ -1,6 +1,6 @@
 import express from "express";
 import db from "../models";
-import bcrpt from "bcrypt";
+import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { isLoggedIn, isNotLoggedIn } from "./middleware";
 import passport from "passport";
@@ -22,7 +22,7 @@ router.post("/signup", isNotLoggedIn, async (req, res, next) => {
     if (exUser) {
       return res.status(403).send("이미사용중인 이메일 주소입니다.");
     }
-    const hashPassword = await bcrpt.hash(req.body.password, 10);
+    const hashPassword = await bcrypt.hash(req.body.password, 10);
 
     const newUser = await db.User.create({
       email: req.body.email,
@@ -86,7 +86,7 @@ router.get("/:id/posts", async (req, res, next) => {
   try {
     const posts = await db.Post.findAll({
       where: {
-        userId: parseInt(req.params.id),
+        userId: parseInt(req.params.id)||(req.user && req.user.id)||0,
       },
       include: [
         {
@@ -173,8 +173,8 @@ router.get('/:id/followings', isLoggedIn, async (req, res, next) => {//팔로우
   try {
     const user = await db.User.findOne({
       where:{
-        id:parseInt(req.params.id,10),
-      }
+        id:parseInt(req.params.id,10)||(req.user && req.user.id)||0,
+      }//req.params.id 는 문자열, parseInt 숫자로 변환. 문자열일 경우 뒤에 문장( || 이후 문장이 실행이안됨.) 
     })
 
     const followers = await user.getFollowings({
@@ -190,7 +190,7 @@ router.get('/:id/followers', isLoggedIn, async (req, res, next) => {//팔로우�
   try {
     const user = await db.User.findOne({
       where:{
-        id:parseInt(req.params.id,10),
+        id:parseInt(req.params.id,10)||(req.user && req.user.id)||0,
       }
     })
     const followings = await user.getFollowers({attributes:['id','nickname','email']})
@@ -214,4 +214,20 @@ router.delete('/:id/follower', isLoggedIn, async (req, res, next) => {//팔로�
     next(err);
   }
 }); 
+
+router.patch('/info', isLoggedIn, async (req, res, next) => {
+  try {
+    if(req.body.password){
+    const hashPassword = await bcrypt.hash(req.body.password,10);
+    await db.User.update({nickname:req.body.nickname,password:hashPassword},{where:{id:req.user.id}})
+    return res.json(req.user.id);
+    }
+    await db.User.update({nickname:req.body.nickname},{where:{id:req.user.id}})
+    return res.json(req.user.id);
+  } catch (err) {
+    console.error(err);
+    next(err);
+  }
+})
+
 module.exports = router;
