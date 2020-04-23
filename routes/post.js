@@ -81,6 +81,21 @@ router.post("/images", upload.array("image"), (req, res) => {
   res.json(req.files.map((v) => v.filename));
 });
 
+router.get('/:id',async(req,res,next)=>{
+  try{
+    const post = await db.Post.findOne({where:{id:req.params.id},
+      include:[{
+        model:db.User,
+        attributes:['id','nickname','email'],
+      },{
+        model:db.Image,
+      }]})
+      res.json(post);
+  }catch(err){
+    console.error(err);
+    next(err);
+  }
+})
 router.get("/:id/comments", async (req, res, next) => {
   // 해당 id 게시글에 모든댓글
   try {
@@ -220,5 +235,17 @@ router.post('/:id/retweet',isLoggedIn,async(req,res,next)=>{
   }
 })
 
-
+router.delete('/:id',isLoggedIn,async(req,res,next)=>{
+  try{
+    const post = await db.Post.findOne({where:{id:req.params.id}})
+    if(!post){
+      return res.status(404).send('존재하지 않는 게시물입니다.');
+    }
+    await db.Post.destroy({where:{id:post.id}})
+    res.send(req.params.id);
+  }catch(err){
+    console.error(err);
+    next(err);
+  }
+})
 module.exports = router;
