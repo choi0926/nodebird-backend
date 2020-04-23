@@ -178,7 +178,9 @@ router.get('/:id/followings', isLoggedIn, async (req, res, next) => {//팔로우
     })
 
     const followers = await user.getFollowings({
-      attributes:['id','nickname','email']
+      attributes:['id','nickname','email'],
+      limit:parseInt(req.query.limit,10),
+      offset:parseInt(req.query.offset,10),
     })
     res.json(followers);
   } catch (err) {
@@ -193,7 +195,10 @@ router.get('/:id/followers', isLoggedIn, async (req, res, next) => {//팔로우�
         id:parseInt(req.params.id,10)||(req.user && req.user.id)||0,
       }
     })
-    const followings = await user.getFollowers({attributes:['id','nickname','email']})
+    const followings = await user.getFollowers({attributes:['id','nickname','email'],
+    limit:parseInt(req.query.limit,10),
+    offset:parseInt(req.query.offset,10),
+})
     res.json(followings);
   } catch (err) {
     console.error(err);
