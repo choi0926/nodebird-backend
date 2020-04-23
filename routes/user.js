@@ -59,12 +59,12 @@ router.post("/login", async (req, res, next) => {
           },
           {
             model: db.User,
-            as: "followers",
+            as: "Followers",
             attributes: ["id"],
           },
           {
             model: db.User,
-            as: "followings",
+            as: "Followings",
             attributes: ["id"],
           },
         ],
@@ -117,12 +117,12 @@ router.get("/:id", async (req, res, next) => {
         },
         {
           model: db.User,
-          as: "followings",
+          as: "Followings",
           attributes: ["id"],
         },
         {
           model: db.User,
-          as: "followers",
+          as: "Followers",
           attributes: ["id"],
         },
       ],
@@ -146,6 +146,7 @@ router.post("/:id/follow", isLoggedIn, async (req, res, next) => {
         id: req.user.id,
       },
     });
+    
     await me.addFollowing(req.params.id);
     res.json(req.params.id);
   } catch (err) {
@@ -168,4 +169,49 @@ router.delete("/:id/follow", isLoggedIn, async (req, res, next) => {
     next(err);
   }
 });
+router.get('/:id/followings', isLoggedIn, async (req, res, next) => {//팔로우한 사용자 목록 불러오기
+  try {
+    const user = await db.User.findOne({
+      where:{
+        id:parseInt(req.params.id,10),
+      }
+    })
+
+    const followers = await user.getFollowings({
+      attributes:['id','nickname','email']
+    })
+    res.json(followers);
+  } catch (err) {
+    console.error(err);
+    next(err);
+}});
+
+router.get('/:id/followers', isLoggedIn, async (req, res, next) => {//팔로우한 사용자 목록 불러오기
+  try {
+    const user = await db.User.findOne({
+      where:{
+        id:parseInt(req.params.id,10),
+      }
+    })
+    const followings = await user.getFollowers({attributes:['id','nickname','email']})
+    res.json(followings);
+  } catch (err) {
+    console.error(err);
+    next(err);
+  }
+  
+});
+
+router.delete('/:id/follower', isLoggedIn, async (req, res, next) => {//팔로우한 사용자 삭제
+  try {
+    const me = await db.User.findOne({
+      where:{id:req.user.id}
+    })
+    await me.removeFollower(req.params.id);
+    res.send(req.params.id);
+  } catch (err) {
+    console.error(err);
+    next(err);
+  }
+}); 
 module.exports = router;

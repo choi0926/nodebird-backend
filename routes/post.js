@@ -3,7 +3,6 @@ import db from "../models";
 import path from "path";
 import multer from "multer";
 import { isLoggedIn, isNotLoggedIn } from "./middleware";
-import { promises } from "dns";
 
 const router = express.Router();
 
