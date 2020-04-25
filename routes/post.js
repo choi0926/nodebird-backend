@@ -3,20 +3,24 @@ import db from "../models";
 import path from "path";
 import multer from "multer";
 import { isLoggedIn, isNotLoggedIn } from "./middleware";
+import multerS3 from 'multer-s3';
+import AWS from 'aws-sdk';
 
 const router = express.Router();
 
+AWS.config.update({
+  region:'ap-northeast-2',
+  accessKeyId:process.env.S3_ACCESS_KEY_ID,
+  secretAccessKey:process.env.S3_SECRET_ACCESS_KEY
+})
+
 const upload = multer({
-  storage: multer.diskStorage({
-    destination(req, file, done) {
-      //추후 S3
-      done(null, "uploads");
-    },
-    filename(req, file, done) {
-      const ext = path.extname(file.originalname); //확장자  .jpg
-      const basename = path.basename(file.originalname, ext); // 파일이름
-      done(null, basename + new Date().valueOf() + ext); //파일이름에 날짜추가
-    },
+  storage: multerS3({
+   s3:new AWS.S3(),
+   bucket:'title-academy',
+   key(req, file, cb){
+     cb(null, `original/${+new Date()}${path.basename(file.originalname)}`);
+   }
   }),
   limits: { fileSize: 20 * 1024 * 1024 }, //업로드 용량
 });
@@ -78,7 +82,7 @@ router.post("/", isLoggedIn, upload.none(), async (req, res, next) => {
 });
 
 router.post("/images", upload.array("image"), (req, res) => {
-  res.json(req.files.map((v) => v.filename));
+  res.json(req.files.map((v) => v.location));
 });
 
 router.get('/:id',async(req,res,next)=>{
