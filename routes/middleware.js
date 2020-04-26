@@ -1,3 +1,7 @@
+import bcrypt from "bcrypt";
+import db from "../models";
+require("dotenv").config();
+
 exports.isLoggedIn = (req, res, next) => {
   if (req.user) {
     next();
