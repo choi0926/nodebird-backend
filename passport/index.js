@@ -1,22 +1,61 @@
-import passport from "passport";
-import db from "../models";
-import local from "./local";
+import passport from 'passport';
+import passportJWT from 'passport-jwt';
+import {Strategy as JWTStrategy} from 'passport-jwt';
+import {ExtractJwt as ExtractJWT} from 'passport-jwt';
+import {Strategy as LocalStrategy } from 'passport-local';
+import bcrypt from 'bcrypt';
+import db from '../models';
+import dotenv from 'dotenv';
 
+dotenv.config();
 module.exports = () => {
-  passport.serializeUser((user, done) => {
-    //서버쪽에 id, cookie
-    return done(null, user.id);
-  });
-  passport.deserializeUser(async (id, done) => {
-    // 요청 보낼때마다 실행되기때문에 "캐싱" 추가해야함.
-    try {
-      const user = await db.User.findOne({ where: { id } });
-      return done(null, user); //user 정보는 req.user에 저장됨
-    } catch (err) {
-      console.error(err);
-      return done(err);
-    }
-  });
+  // Local Strategy
+  passport.use(
+    new LocalStrategy(
+      {
+        usernameField: 'email',
+        passwordField: 'password',
+      },
+      async (email, password, done) => {
+        try {
+          const user = await db.User.findOne({ where: { email } });
+          if (!user) {
+            return done(null, false, { message: 'User does not exist' });
+          }
+          const result = await bcrypt.compare(password, user.password);
+          if (result) {
+            return done(null, user);
+          }
+          return done(null, false, { message: 'The password is wrong' });
+        } catch (err) {
+          console.error(err);
+          return done(err);
+        }
+      }
+    )
+  );
 
-  local();
+  //JWT Strategy
+  passport.use(
+    new JWTStrategy(
+      {
+        jwtFromRequest: ExtractJWT.fromAuthHeaderAsBearerToken('jwt'),
+        secretOrKey: process.env.ACCESS_TOKEN_SECRET,
+
+    },
+      async ({id}, done) => {
+        try {
+          const user = await db.User.findByPk(id);
+          if (!user) {
+            return done(null, false, { message: 'User does not exist' });
+          }
+          console.log(user)
+          return done(null, user);
+        } catch (err) {
+          console.error(err);
+          return done(err);
+        }
+      }
+    )
+  );
 };

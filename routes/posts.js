@@ -1,8 +1,8 @@
-import express from "express";
-import db from "../models";
+import express from 'express';
+import db from '../models';
 const router = express.Router();
 
-router.get("/", async (req, res, next) => {
+router.get('/', async (req, res, next) => {
   try {
     const posts = await db.Post.findAll({
       include: [
@@ -29,12 +29,16 @@ router.get("/", async (req, res, next) => {
           }]
         }
       ],
-      order: [["createdAt", "DESC"]],
+      order: [['createdAt', 'DESC']],
     });
-    res.json(posts);
+    return res.json({
+      success: true,
+      message: 'Successful writing of bulletin post',
+      data: { posts },
+    });
   } catch (err) {
     console.error(err);
-    next(err);
+    return next(err);
   }
 });
 

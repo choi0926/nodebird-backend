@@ -1,19 +1,11 @@
-import bcrypt from "bcrypt";
-import db from "../models";
-require("dotenv").config();
+import passport from 'passport';
+import dotenv from 'dotenv';
+dotenv.config();
 
-exports.isLoggedIn = (req, res, next) => {
-  if (req.user) {
+exports.isNotJwtLoggedIn = (req, res, next) => {
+  if (!req.headers.authorization) {
     next();
   } else {
-    res.status(401).send("로그인이 필요합니다.");
-  }
-};
-
-exports.isNotLoggedIn = (req, res, next) => {
-  if (!req.user) {
-    next();
-  } else {
-    res.status(401).send("로그인한 사용자는 접근할 수 없습니다.");
+    res.status(401).send('로그인한 사용자는 접근할 수 없습니다.');
   }
 };
