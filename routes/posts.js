@@ -30,6 +30,8 @@ router.get('/', async (req, res, next) => {
         }
       ],
       order: [['createdAt', 'DESC']],
+      limit: parseInt(req.query.limit, 10),
+      offset: parseInt(req.query.offset, 10),
     });
     return res.json({
       success: true,

@@ -4,7 +4,7 @@ import path from 'path';
 import multer from 'multer';
 import multerS3 from 'multer-s3';
 import AWS from 'aws-sdk';
-import passport from "passport";
+import { isAuth } from "./middleware";
 const router = express.Router();
 
 AWS.config.update({
@@ -23,22 +23,7 @@ const upload = multer({
   }),
   limits: { fileSize: 20 * 1024 * 1024 }, //업로드 용량
 });
-router.post('/', upload.none(), async (req, res, next) => {
-  passport.authenticate('jwt', { session: false }, (err, user, info) => {
-    if (err) {
-      console.error(err);
-      return next(err);
-    }
-    if (info) {
-      return res
-        .status(401)
-        .json({ success: false, message: info.message, data: {} });
-    }
-
-    return req.login(user, { session: false }, async (loginErr) => {
-      if (loginErr) {
-        return next(loginErr);
-      }
+router.post('/', upload.none(), isAuth, async (req, res, next) => {
       try {
         const hashtags = req.body.content.match(/#[^\s]+/g);
         console.log(hashtags);
@@ -97,9 +82,6 @@ router.post('/', upload.none(), async (req, res, next) => {
         console.error(err);
         return next(err);
       }
-    
-    });
-  })(req, res, next);
 });
 
 router.post('/images', upload.array('image'), (req, res) => {
@@ -122,7 +104,7 @@ router.get('/:id', async (req, res, next) => {
     });
     return res.json({
       success: true,
-      message: 'Successfully load the bulletin post list of the user',
+      message: 'Successfully loaded post information',
       data: { post },
     });
   } catch (err) {
@@ -161,22 +143,7 @@ router.get('/:id/comments', async (req, res, next) => {
   }
 });
 
-router.post('/:id/comment', async (req, res, next) => {
-  passport.authenticate('jwt', { session: false }, (err, user, info) => {
-    if (err) {
-      console.error(err);
-      return next(err);
-    }
-    if (info) {
-      return res
-        .status(401)
-        .json({ success: false, message: info.message, data: {} });
-    }
-
-    return req.login(user, { session: false }, async (loginErr) => {
-      if (loginErr) {
-        return next(loginErr);
-      }
+router.post('/:id/comment', isAuth, async (req, res, next) => {
       try {
         const post = await db.Post.findOne({
           where: { id: req.params.id },
@@ -210,26 +177,10 @@ router.post('/:id/comment', async (req, res, next) => {
         console.error(err);
         return next(err);
       }
-    });
-  })(req, res, next);
 });
 
-router.post('/:id/like', async (req, res, next) => {
-  passport.authenticate('jwt', { session: false }, (err, user, info) => {
-    if (err) {
-      console.error(err);
-      return next(err);
-    }
-    if (info) {
-      return res
-        .status(401)
-        .json({ success: false, message: info.message, data: {} });
-    }
-
-    return req.login(user, { session: false }, async (loginErr) => {
-      if (loginErr) {
-        return next(loginErr);
-      }
+router.post('/:id/like', isAuth, async (req, res, next) => {
+  
       try {
         const post = await db.Post.findOne({ where: { id: req.params.id } });
         if (!post) {
@@ -247,26 +198,9 @@ router.post('/:id/like', async (req, res, next) => {
         console.error(err);
         return next(err);
       }
-    });
-  })(req, res, next);
 });
   
-router.delete('/:id/like', async (req, res, next) => {
-  passport.authenticate('jwt', { session: false }, (err, user, info) => {
-    if (err) {
-      console.error(err);
-      return next(err);
-    }
-    if (info) {
-      return res
-        .status(401)
-        .json({ success: false, message: info.message, data: {} });
-    }
-
-    return req.login(user, { session: false }, async (loginErr) => {
-      if (loginErr) {
-        return next(loginErr);
-      }
+router.delete('/:id/like',isAuth, async (req, res, next) => {
       try {
         const post = await db.Post.findOne({ where: { id: req.params.id } });
         if (!post) {
@@ -284,26 +218,9 @@ router.delete('/:id/like', async (req, res, next) => {
         console.error(err);
         return next(err);
       }
-    });
-  })(req, res, next);
 });
   
-router.post('/:id/retweet', async (req, res, next) => {
-  passport.authenticate('jwt', { session: false }, (err, user, info) => {
-    if (err) {
-      console.error(err);
-      return next(err);
-    }
-    if (info) {
-      return res
-        .status(401)
-        .json({ success: false, message: info.message, data: {} });
-    }
-
-    return req.login(user, { session: false }, async (loginErr) => {
-      if (loginErr) {
-        return next(loginErr);
-      }
+router.post('/:id/retweet',isAuth, async (req, res, next) => {
       try {
         const post = await db.Post.findOne({
           where: { id: req.params.id },
@@ -386,26 +303,9 @@ router.post('/:id/retweet', async (req, res, next) => {
         console.error(err);
         return next(err);
       }
-    });
-  })(req, res, next);
 });
 
-router.delete('/:id', async (req, res, next) => {
-  passport.authenticate('jwt', { session: false }, (err, user, info) => {
-    if (err) {
-      console.error(err);
-      return next(err);
-    }
-    if (info) {
-      return res
-        .status(401)
-        .json({ success: false, message: info.message, data: {} });
-    }
-
-    return req.login(user, { session: false }, async (loginErr) => {
-      if (loginErr) {
-        return next(loginErr);
-      }
+router.delete('/:id', isAuth, async (req, res, next) => {
       try {
         const post = await db.Post.findOne({ where: { id: req.params.id } });
         if (!post) {
@@ -423,8 +323,6 @@ router.delete('/:id', async (req, res, next) => {
         console.error(err);
         return next(err);
       }
-    });
-  })(req, res, next);
 });
 
 module.exports = router;
