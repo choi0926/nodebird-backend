@@ -45,7 +45,6 @@ router.post('/', upload.none(), isAuth, async (req, res, next) => {
         }
         if (req.body.image) {
           if (Array.isArray(req.body.image)) {
-            //이미지가 배열인지
             const images = await Promise.all(
               req.body.image.map((image) => {
                 return db.Image.create({ src: image, UserId: req.user.id });
@@ -53,7 +52,6 @@ router.post('/', upload.none(), isAuth, async (req, res, next) => {
             );
             await newPost.addImages(images);
           } else {
-            //이미지 1개 업로드
             const image = await db.Image.create({
               src: req.body.image,
               UserId: req.user.id,

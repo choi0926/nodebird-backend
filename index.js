@@ -13,8 +13,9 @@ import passport from 'passport';
 import passportConfig from './passport';
 import helmet from 'helmet';
 import hpp from 'hpp';
-const prod = process.env.NODE_ENV == 'production';
+// const prod = process.env.NODE_ENV == 'development';
 
+console.log(process.env.NODE_ENV)
 dotenv.config();
 const app = express();
 db.sequelize.sync();
