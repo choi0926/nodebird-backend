@@ -1,64 +1,17 @@
 import express from "express";
 import db from "../models";
 import bcrypt from "bcrypt";
-import { isAuth, isNotAuth } from "./middleware";
+import { isAuth, isNotAuth, sendMail } from "./middleware";
 import passport from "passport";
 import redis from "redis";
 import JWTR from "jwt-redis";
 import dotenv from "dotenv";
+import crypto from "crypto";
+
 dotenv.config();
 const redisClient = redis.createClient();
 const jwtr = new JWTR(redisClient);
 const router = express.Router();
-
-router.post("/refreshedToken", async (req, res, next) => {
-  try {
-    if (!req.body.accessToken || !req.body.refreshToken) {
-      return res
-        .status(403)
-        .json({ success: false, message: "not auth token", data: {} });
-    }
-    const getAccessToken = req.body.accessToken;
-    const getRefreshToken = req.body.refreshToken;
-    const accessToken = getAccessToken && getAccessToken.split(" ")[1];
-    const refreshToken = getRefreshToken && getRefreshToken.split(" ")[1];
-    const accessTokenDecoded = await jwtr.decode(accessToken);
-    const user = await db.User.findOne({
-      where: { email: accessTokenDecoded.email },
-    });
-    if (!user) {
-      return res
-        .status(403)
-        .json({ success: false, message: "Invalid access token " });
-    }
-    if (!user.refreshToken === refreshToken) {
-      return res
-        .status(403)
-        .json({ success: false, message: "Invalid refresh token", data: {} });
-    }
-    const refreshTokenVerify = await jwtr.verify(
-      refreshToken,
-      process.env.REFRESH_TOKEN_SECRET
-    );
-    if (!refreshTokenVerify) {
-      return res
-        .status(403)
-        .json({ success: false, message: "Invalid refresh token", data: {} });
-    }
-    const reissueAccessToken = await jwtr.sign(
-      { email: user.email, id: user.id },
-      process.env.ACCESS_TOKEN_SECRET
-    );
-    return res.json({
-      success: true,
-      message: "Token reissue successfully",
-      data: { reissueAccessToken: "bearer " + reissueAccessToken },
-    });
-  } catch (err) {
-    console.error(err);
-    return next(err);
-  }
-});
 
 router.get("/", isAuth, async (req, res, next) => {
   try {
@@ -205,6 +158,116 @@ router.post("/logout", isAuth, async (req, res, next) => {
   }
 });
 
+router.post("/refreshedToken", async (req, res, next) => {
+  try {
+    if (!req.body.accessToken || !req.body.refreshToken) {
+      return res
+        .status(403)
+        .json({ success: false, message: "not auth token", data: {} });
+    }
+    const getAccessToken = req.body.accessToken;
+    const getRefreshToken = req.body.refreshToken;
+    const accessToken = getAccessToken && getAccessToken.split(" ")[1];
+    const refreshToken = getRefreshToken && getRefreshToken.split(" ")[1];
+    const accessTokenDecoded = await jwtr.decode(accessToken);
+    const user = await db.User.findOne({
+      where: { email: accessTokenDecoded.email },
+    });
+    if (!user) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Invalid access token " });
+    }
+    if (!user.refreshToken === refreshToken) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Invalid refresh token", data: {} });
+    }
+    const refreshTokenVerify = await jwtr.verify(
+      refreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+    if (!refreshTokenVerify) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Invalid refresh token", data: {} });
+    }
+    const reissueAccessToken = await jwtr.sign(
+      { email: user.email, id: user.id },
+      process.env.ACCESS_TOKEN_SECRET
+    );
+    return res.json({
+      success: true,
+      message: "Token reissue successfully",
+      data: { reissueAccessToken: "bearer " + reissueAccessToken },
+    });
+  } catch (err) {
+    console.error(err);
+    return next(err);
+  }
+});
+
+router.get("/forgotPassword", async (req, res, next) => {
+  try {
+    const user = await db.User.findOne({
+      where: { email: req.body.email },
+    });
+    if (!user) {
+      return res
+        .status(403)
+        .json({ success: false, message: "This user email does not exist." });
+    }
+
+    crypto.randomBytes(64, (err, buf) => {
+      crypto.pbkdf2(
+        user.email,
+        buf + process.env.AUTH_SECRET,
+        100000,
+        64,
+        "sha512",
+        async (err, key) => {
+          const regExp = /[\{\}\[\]\/?.,;:|\)*~`!^\-_+<>@\#$%&\\\=\(\'\"]/gi;
+          const authCode = key.toString("base64").replace(regExp, "");
+          await db.User.update({ authCode }, { where: { email: user.email } });
+          sendMail(user.email, "Your password reset", authCode);
+        }
+      );
+    });
+
+    return res.json({
+      success: true,
+      message: "Your mail has been sent successfully.",
+      data: {},
+    });
+  } catch (err) {
+    console.error(err);
+    return next(err);
+  }
+});
+
+router.get("/authCode", async (req, res, next) => {
+  try {
+    const user = await db.User.findOne({
+      where: { authCode: req.body.authCode },
+    });
+    if (!user) {
+      return res.json({
+        success: true,
+        message: "Authentication failed.",
+        data: {},
+      });
+    }
+    return res.json({
+      success: true,
+      message: "Authentication completed.",
+      data: { user },
+    });
+  } catch (err) {
+    console.error(err);
+    return next(err);
+  }
+});
+
 router.get("/:id/posts", async (req, res, next) => {
   try {
     const posts = await db.Post.findAll({
@@ -335,7 +398,6 @@ router.get("/:id/followings", isAuth, async (req, res, next) => {
 });
 
 router.get("/:id/followers", isAuth, async (req, res, next) => {
-  //팔로우한 사용자 목록 불러오기
   try {
     const user = await db.User.findOne({
       where: {
@@ -344,8 +406,6 @@ router.get("/:id/followers", isAuth, async (req, res, next) => {
     });
     const followings = await user.getFollowers({
       attributes: ["id", "nickname", "email"],
-      // limit: parseInt(req.query.limit, 10),
-      // offset: parseInt(req.query.offset, 10),
     });
     return res.json({
       success: true,

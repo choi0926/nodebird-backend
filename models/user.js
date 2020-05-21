@@ -19,6 +19,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.TEXT,
         allowNull: true,
       },
+      authCode:{
+        type: DataTypes.TEXT,
+        allowNull:true
+      }
     },
     {
       charset: "utf8",
